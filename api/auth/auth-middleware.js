@@ -1,4 +1,3 @@
-const express = require("express");
 const User = require("../users/users-model");
 
 /*
@@ -10,7 +9,7 @@ const User = require("../users/users-model");
   }
 */
 function restricted( req, res, next ) {
-  if( req.session && req.session.user ) {
+  if( req.session.user ) {
     next();
 
   } else {
@@ -26,19 +25,20 @@ function restricted( req, res, next ) {
     "message": "Username taken"
   }
 */
-function checkUsernameFree( req, res, next) {
-  User.findBy(req.body)
-    .then(response => {
-      if( response.length ) {
-        res.status(422).json( { message: "Username taken" } )
+async function checkUsernameFree( req, res, next ) {
+  try {
+    const users = await User.findBy( { username: req.body.username } )
 
-      } else {
-        next();
-      }
+    if(!users.length) {
+      next();
 
-    }).catch(error => {
-      res.status(500).json( { message: error.message } )
-    })
+    } else {
+      next( { status: 422, message: "Username taken" } )
+    }
+
+  } catch (error) {
+    next(error);
+  }
 }
 
 /*
@@ -51,14 +51,14 @@ function checkUsernameFree( req, res, next) {
 */
 async function checkUsernameExists( req, res, next ) {
   try {
-    const rows = await User.findBy( { username: req.body.username } )
+    const users = await User.findBy( { username: req.body.username } )
 
-    if( rows.length ) {
-      req.userData = rows[0]
+    if( users.length ) {
+      req.user = users[0]
       next();
 
     } else {
-      res.status(401).json( { message: "Invalid credentials" } )
+      next( { status: 401, message: "Invalid credentials"})
     }
 
   } catch (error) {
@@ -75,8 +75,8 @@ async function checkUsernameExists( req, res, next ) {
   }
 */
 function checkPasswordLength( req, res, next ) {
-  if( !req.body.password || req.body.password.length <= 3 ) {
-    res.status(422).json( { message: "Password must be longer than 3 chars" } )
+  if( !req.body.password || req.body.password.length < 3 ) {
+    next( { status: 422, message: "Password must be longer than 3 chars" } )
 
   } else {
     next();

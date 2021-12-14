@@ -3,6 +3,7 @@ const helmet = require("helmet");
 const cors = require("cors");
 const session = require("express-session");
 const Store = require("connect-session-knex")(session);
+const knex = require("../data/db-config");
 
 const authRouter = require("./auth/auth-router");
 const usersRouter = require("./users/users-router");
@@ -26,22 +27,20 @@ const server = express();
 server.use(session({
   name: "chocolatechip",
   secret: process.env.SESSION_SECRET || "keep it secret, keep it safe",
-  cookie: {
-    maxAge: 1000 * 60 * 60,
-    secure: false,
-    httpOnly: false
-  },
   resave: false,
   saveUninitialized: false,
-  rolling: true,
-
   store: new Store({
-    knex: require("../database/db-config"),
+    knex,
+    createtable: true,
+    clearInterval: 1000 * 60 * 10,
     tablename: "sessions",
     sidfieldname: "sid",
-    createtable: true,
-    clearInterval: 1000 * 60 * 60,
-  })
+  }),
+  cookie: {
+    maxAge: 1000 * 60 * 10,
+    secure: false,
+    httpOnly: true,
+  },
 }))
 
 server.use(helmet());
